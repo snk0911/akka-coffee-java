@@ -1,0 +1,1 @@
+{"name":"sbt","version":"1.6.2","bspVersion":"2.0.0-M5","languages":["scala"],"argv":["C:\\dev\\bin\\java\\java-1.8.0-openjdk-1.8.0.322-1.b06.ojdkbuild.windows.x86_64\\jre/bin/java","-Xms100m","-Xmx100m","-classpath","C:\\dev\\repos\\git\\akka-quickstart-java\\sbt-dist\\bin\\sbt-launch.jar","-Dsbt.script=sbt.bat","xsbt.boot.Boot","-bsp"]}
