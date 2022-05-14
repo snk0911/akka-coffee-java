@@ -14,6 +14,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     private ActorRef<CoffeeMachine.Request> coffeeMachine;
 
     public interface Response extends LoadBalancer.Mixed {
+
     }
 
     // is triggered after balance is successfully recharged
@@ -35,7 +36,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         }
     }
 
-    public static final class GetSuccess implements Response {
+    public static final class GetSuccess implements Response{
     }
 
     public static final class GetFail implements Response {
