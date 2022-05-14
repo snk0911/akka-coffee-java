@@ -14,7 +14,7 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
     public interface Request extends LoadBalancer.Mixed {
     }
 
-    // the customer wants to recharge the balance
+    // is triggered when the customer wants to recharge the balance
     public static final class Recharge implements Request {
         public ActorRef<Customer.Response> sender;
 
@@ -23,7 +23,7 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         }
     }
 
-    // load balancer asks for the current balance of the customer
+    // is triggered when load balancer asks for the current balance of the customer
     public static final class State implements Request {
         public final ActorRef<LoadBalancer.Mixed> sender;
 
@@ -54,7 +54,7 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         getContext().getLog().info("Got a deposit request from {} (old balance: {})!", request.sender.path(), balance);
         this.balance += 1;
         // cash register sends a message with the new balance
-        request.sender.tell(new Customer.CreditSuccess(this.getContext().getSelf(), balance));
+        request.sender.tell(new Customer.CreditSuccess(balance));
         return this;
     }
 

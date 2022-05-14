@@ -16,12 +16,11 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     public interface Response extends LoadBalancer.Mixed {
     }
 
+    // is triggered after balance is successfully recharged
     public static final class CreditSuccess implements Response {
         private int balance;
-        public final ActorRef<CashRegister.Request> sender;
 
-        public CreditSuccess(ActorRef<CashRegister.Request> sender, int balance) {
-            this.sender = sender;
+        public CreditSuccess(int balance) {
             this.balance = balance;
         }
     }
@@ -39,7 +38,10 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     public static final class GetSuccess implements Response {
     }
 
-    public static final class Fail implements Response {
+    public static final class GetFail implements Response {
+    }
+
+    public static final class CreditFail implements Response {
     }
 
     public static Behavior<Response> create(ActorRef<CashRegister.Request> cashRegister, ActorRef<LoadBalancer.Mixed> loadBalancer) {
@@ -55,10 +57,11 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     @Override
     public Receive<Response> createReceive() {
         return newReceiveBuilder()
-                // credit success
                 .onMessage(CreditSuccess.class, this::onCreditSuccess)
-                .onMessage(Fail.class, this::onFail)
+                .onMessage(CreditFail.class, this::onCreditFail)
                 .onMessage(GetCoffeeMachine.class, this::onGetCoffeeMachine)
+                .onMessage(GetSuccess.class, this::onGetSuccess)
+                .onMessage(GetFail.class, this::onGetFail)
                 .build();
     }
 
@@ -73,9 +76,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         return this;
     }
 
-    // not yet
-    private Behavior<Response> onFail(Fail command) {
-        getContext().getLog().info("Fail");
+    // the customer doesn't have enough money for a coffee
+    private Behavior<Response> onCreditFail(CreditFail command) {
+        getContext().getLog().info("Your current balance is insufficient for a coffee. Please try again.");
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -88,6 +91,23 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     private Behavior<Response> onGetCoffeeMachine(GetCoffeeMachine command) {
         getContext().getLog().info("You can know take coffee from {}", command.coffeeMachine);
         command.coffeeMachine.tell(new CoffeeMachine.GetCoffee(this.getContext().getSelf()));
+        return this;
+    }
+
+    // customer successfully received a coffee from the coffee machine
+    private Behavior<Response> onGetSuccess(GetCoffeeMachine command) {
+        getContext().getLog().info("Here is your coffee!");
+        if (Math.random() < 0.5) {
+            cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
+        } else {
+            loadBalancer.tell(new LoadBalancer.GetCoffee(this.getContext().getSelf()));
+        }
+        return this;
+    }
+
+    // all the coffee machines have run out of coffee
+    private Behavior<Response> onGetFail(GetCoffeeMachine command) {
+        getContext().getLog().info("Sorry, we have run out of coffee. Please try again later.");
         return this;
     }
 }

@@ -13,7 +13,8 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
     public interface Request extends LoadBalancer.Mixed {
     }
 
-    // the load balancer asks for the amount of remaining coffee at each machine
+    // is triggered when the load balancer asks for the amount of remaining coffee at each machine
+    // TODO: fix infinite loop GiveSupply and GetSupply
     public static final class GiveSupply implements Request {
         public ActorRef<LoadBalancer.Mixed> sender;
 
@@ -22,7 +23,7 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
         }
     }
 
-    // the customer asks direct for a coffee (after being checked)
+    // is triggered when the customer asks direct for a coffee (after being checked)
     public static final class GetCoffee implements Request {
         public final ActorRef<Customer.Response> sender;
 
@@ -62,7 +63,8 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
             this.remainingCoffee -= 1;
             request.sender.tell(new Customer.GetSuccess());
         } else {
-            request.sender.tell(new Customer.Fail());
+            // the machine runs out of coffee
+            request.sender.tell(new Customer.GetFail());
         }
         return this;
     }

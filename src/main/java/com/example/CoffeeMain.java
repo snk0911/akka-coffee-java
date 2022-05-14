@@ -10,8 +10,6 @@ import akka.actor.typed.javadsl.Receive;
 public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
     public static class StartMessage {}
 
-    //ActorRef<SomeActor.SomeMessage> someActor;
-
     public static Behavior<StartMessage> create() {
         return Behaviors.setup(CoffeeMain::new);
     }
