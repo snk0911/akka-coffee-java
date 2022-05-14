@@ -95,10 +95,10 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // TODO: load balancer returns the coffee machine with the most coffee to the customer
+    // load balancer returns the coffee machine with the most coffee to the customer
     private Behavior<Mixed> onGetSupply(GetSupply response) {
         getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
-        
+        this.getContext().getSelf().tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.coffeeMachineMax));
         return this;
     }
 }
