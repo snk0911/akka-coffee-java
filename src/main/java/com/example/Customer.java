@@ -16,16 +16,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     public interface Response extends LoadBalancer.Mixed {
     }
 
-    // is triggered when the balance is successfully recharge
-    public static final class RechargeSuccess implements Response {
-        private int balance;
-
-        public RechargeSuccess(int balance) {
-            this.balance = balance;
-        }
-    }
-
-    // is triggered when customer has enough money
+    // is triggered after balance is successfully recharged
     public static final class CreditSuccess implements Response {
         private int balance;
 
