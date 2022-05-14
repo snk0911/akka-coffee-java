@@ -14,15 +14,6 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     public interface Mixed {
     }
 
-    // TODO: should return the coffee machine with the highest amount of remaining coffee
-    public static final class CoffeeSuccess implements Mixed {
-        public ActorRef<Customer.Response> sender;
-
-        public CoffeeSuccess(ActorRef<Customer.Response> sender) {
-            this.sender = sender;
-        }
-    }
-
     // after cash register confirmed that the customer has enough money
     public static class CreditSuccess implements Mixed {
         public ActorRef<CashRegister.Request> sender;
@@ -79,8 +70,6 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return newReceiveBuilder()
                 .onMessage(CreditSuccess.class, this::onCreditSuccess)
                 .onMessage(CreditFail.class, this::onCreditFail)
-                .onMessage(CoffeeSuccess.class, this::onCoffeeSuccess)
-                .onMessage(GetSupply.class, this::onGetSupply)
                 .onMessage(GetCoffee.class, this::onGetCoffee)
                 .build();
     }
@@ -98,12 +87,6 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // TODO: should return the coffee machine with the highest amount of remaining coffee
-    private Behavior<Mixed> onCoffeeSuccess(CreditFail respond) {
-      //  this.getContext().getSelf().tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), ));
-        return this;
-    }
-
     // customer asks load balancer for a coffee
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
         getContext().getLog().info("Got a get request from {}!", request.sender.path());
@@ -112,13 +95,10 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // returns the coffee machine with the most coffee to the customer
+    // TODO: load balancer returns the coffee machine with the most coffee to the customer
     private Behavior<Mixed> onGetSupply(GetSupply response) {
-        getContext().getLog().info("Got a supply request from {}!", response.sender.path());
-        /*for (ActorRef<CoffeeMachine.Request> coffeeMachine :
-                coffeeMachinesList) {
-            coffeeMachine.tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf()));
-        }*/
+        getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
+        
         return this;
     }
 }
