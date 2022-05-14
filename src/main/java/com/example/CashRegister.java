@@ -54,7 +54,7 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         getContext().getLog().info("Got a deposit request from {} (old balance: {})!", request.sender.path(), balance);
         this.balance += 1;
         // cash register sends a message with the new balance
-        request.sender.tell(new Customer.CreditSuccess(balance));
+        request.sender.tell(new Customer.RechargeSuccess(balance));
         return this;
     }
 
