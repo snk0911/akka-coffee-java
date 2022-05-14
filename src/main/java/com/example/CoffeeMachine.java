@@ -16,9 +16,11 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
     // is triggered when the load balancer asks for the amount of remaining coffee at each machine
     public static final class GiveSupply implements Request {
         public ActorRef<LoadBalancer.Mixed> sender;
+        public ActorRef<CoffeeMachine.Request> coffeeMachine;
 
-        public GiveSupply(ActorRef<LoadBalancer.Mixed> sender) {
+        public GiveSupply(ActorRef<LoadBalancer.Mixed> sender, ActorRef<CoffeeMachine.Request> coffeeMachine) {
             this.sender = sender;
+            this.coffeeMachine = coffeeMachine;
         }
     }
 
