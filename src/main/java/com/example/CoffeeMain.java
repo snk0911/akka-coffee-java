@@ -33,7 +33,6 @@ public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
     }
 
     private Behavior<StartMessage> onStartMessage(StartMessage command) {
-
         // cash register which determines if enough balance is given
         cashRegister = getContext().spawn(CashRegister.create(0), "Cash Register");
 

@@ -6,7 +6,7 @@ import java.io.IOException;
 public class AkkaCoffeeStart {
   public static void main(String[] args) {
     //#actor-system
-    final ActorSystem<CoffeeMain.StartMessage> coffeeMain = ActorSystem.create(CoffeeMain.create(), "helloakka");
+    final ActorSystem<CoffeeMain.StartMessage> coffeeMain = ActorSystem.create(CoffeeMain.create(), "mainCoffeeActor");
     //#actor-system
 
     //#main-send-messages
