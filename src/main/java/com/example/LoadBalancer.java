@@ -2,10 +2,7 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.*;
 
 public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
 
@@ -80,7 +77,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         //then the load balancer asks all the coffee machines for their supplies
         for (ActorRef<CoffeeMachine.Request> coffeeMachine : coffeeMachinesList) {
             // TODO: from ActorRef<CoffeeMachine.Request> -> CoffeeMachine Object
-            this.getContext().getSelf().tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), coffeeMachine.));
+            this.getContext().getSelf().tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), coffeeMachine));
         }
         return this;
     }
