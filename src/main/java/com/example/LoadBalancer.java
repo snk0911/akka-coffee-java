@@ -71,6 +71,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
                 .onMessage(CreditSuccess.class, this::onCreditSuccess)
                 .onMessage(CreditFail.class, this::onCreditFail)
                 .onMessage(GetCoffee.class, this::onGetCoffee)
+                .onMessage(GetSupply.class, this::onGetSupply)
                 .build();
     }
 
