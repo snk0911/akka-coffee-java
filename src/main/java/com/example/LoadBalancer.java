@@ -14,7 +14,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     public interface Mixed {
     }
 
-    // after cash register confirmed that the customer has enough money
+    // is triggered after cash register confirmed that the customer has enough money
     public static class CreditSuccess implements Mixed {
         public ActorRef<CashRegister.Request> sender;
 
@@ -23,7 +23,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // after cash register confirmed that the customer doesn't have enough money
+    // is triggered after cash register confirmed that the customer doesn't have enough money
     public static final class CreditFail implements Mixed {
         public ActorRef<LoadBalancer.Mixed> sender;
 
@@ -32,7 +32,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // after receiving the supply report from a coffee machine
+    // is triggered after receiving the supply report from a coffee machine
     public static final class GetSupply implements Mixed {
         public ActorRef<CoffeeMachine.Request> sender;
         public ActorRef<CoffeeMachine.Request> coffeeMachineMax;
@@ -47,7 +47,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // customer asks load balancer for a coffee
+    // is triggered after customer asks load balancer for a coffee
     public static final class GetCoffee implements Mixed {
         public ActorRef<Customer.Response> sender;
 
@@ -75,10 +75,13 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
                 .build();
     }
 
-    //the customer has enough money for a coffee
+    // the customer has enough money for a coffee
     private Behavior<Mixed> onCreditSuccess(CreditSuccess respond) {
         //then the load balancer asks all the coffee machines for their supplies
-        this.getContext().getSelf().tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf()));
+        for (ActorRef<CoffeeMachine.Request> coffeeMachine : coffeeMachinesList) {
+            // TODO: from ActorRef<CoffeeMachine.Request> -> CoffeeMachine Object
+            this.getContext().getSelf().tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), coffeeMachine.));
+        }
         return this;
     }
 
@@ -91,7 +94,7 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     // customer asks load balancer for a coffee
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
         getContext().getLog().info("Got a get request from {}!", request.sender.path());
-        //load balancer asks cash register if he/she has enough money for a coffee
+        //load balancer asks cash register if the customer has enough money for a coffee
         this.getContext().getSelf().tell(new CashRegister.State(this.getContext().getSelf()));
         return this;
     }
