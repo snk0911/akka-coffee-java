@@ -9,7 +9,8 @@ import akka.actor.typed.javadsl.Receive;
 
 public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
 
-    private ActorRef<CoffeeMachine.Request>[] coffeeMachinesList = null;
+    private final ActorRef<CoffeeMachine.Request>[] coffeeMachinesList;
+    private final ActorRef<CashRegister.Request> cashRegister;
 
     public interface Mixed {
     }
@@ -17,29 +18,35 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     // is triggered after cash register confirmed that the customer has enough money
     public static class CreditSuccess implements Mixed {
         public ActorRef<CashRegister.Request> sender;
+        public ActorRef<Customer.Response> ofWhom;
 
-        public CreditSuccess(ActorRef<CashRegister.Request> sender) {
+        public CreditSuccess(ActorRef<CashRegister.Request> sender, ActorRef<Customer.Response> ofWhom) {
             this.sender = sender;
+            this.ofWhom = ofWhom;
         }
     }
 
     // is triggered after cash register confirmed that the customer doesn't have enough money
     public static final class CreditFail implements Mixed {
-        public ActorRef<LoadBalancer.Mixed> sender;
+        public ActorRef<CashRegister.Request> sender;
+        public ActorRef<Customer.Response> ofWhom;
 
-        public CreditFail(ActorRef<LoadBalancer.Mixed> sender) {
+        public CreditFail(ActorRef<CashRegister.Request> sender, ActorRef<Customer.Response> ofWhom) {
             this.sender = sender;
+            this.ofWhom = ofWhom;
         }
     }
 
     // is triggered after receiving the supply report from a coffee machine
     public static final class GetSupply implements Mixed {
         public ActorRef<CoffeeMachine.Request> sender;
+        public ActorRef<Customer.Response> ofWhom;
         public ActorRef<CoffeeMachine.Request> coffeeMachineMax;
         public int max;
 
-        public GetSupply(ActorRef<CoffeeMachine.Request> sender, int remainingCoffee) {
+        public GetSupply(ActorRef<CoffeeMachine.Request> sender, ActorRef<Customer.Response> ofWhom, int remainingCoffee) {
             this.sender = sender;
+            this.ofWhom = ofWhom;
             if (remainingCoffee > max) {
                 max = remainingCoffee;
                 coffeeMachineMax = sender;
@@ -56,12 +63,13 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    public static Behavior<LoadBalancer.Mixed> create(ActorRef<CoffeeMachine.Request>[] coffeeMachinesList) {
-        return Behaviors.setup(context -> new LoadBalancer(context, coffeeMachinesList));
+    public static Behavior<Mixed> create(ActorRef<CashRegister.Request> cashRegister, ActorRef<CoffeeMachine.Request>[] coffeeMachinesList) {
+        return Behaviors.setup(context -> new LoadBalancer(context, cashRegister, coffeeMachinesList));
     }
 
-    public LoadBalancer(ActorContext<Mixed> context, ActorRef<CoffeeMachine.Request>[] coffeeMachinesList) {
+    public LoadBalancer(ActorContext<Mixed> context, ActorRef<CashRegister.Request> cashRegister, ActorRef<CoffeeMachine.Request>[] coffeeMachinesList) {
         super(context);
+        this.cashRegister = cashRegister;
         this.coffeeMachinesList = coffeeMachinesList;
     }
 
@@ -79,30 +87,30 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     private Behavior<Mixed> onCreditSuccess(CreditSuccess respond) {
         //then the load balancer asks all the coffee machines for their supplies
         for (ActorRef<CoffeeMachine.Request> coffeeMachine : coffeeMachinesList) {
-            // TODO: from ActorRef<CoffeeMachine.Request> -> CoffeeMachine Object
-            this.getContext().getSelf().tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), coffeeMachine.));
+            coffeeMachine.tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), respond.ofWhom, coffeeMachine));
         }
         return this;
     }
 
-    //the customer doesn't have enough money for a coffee
-    private Behavior<Mixed> onCreditFail(CreditFail respond) {
-        this.getContext().getSelf().tell(new Customer.CreditFail());
+    // the customer doesn't have enough money for a coffee
+    private Behavior<Mixed> onCreditFail(CreditFail response) {
+        // load balancer forwards the error message to the customer
+        response.ofWhom.tell(new Customer.BalanceFail());
         return this;
     }
 
     // customer asks load balancer for a coffee
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
         getContext().getLog().info("Got a get request from {}!", request.sender.path());
-        //load balancer asks cash register if the customer has enough money for a coffee
-        this.getContext().getSelf().tell(new CashRegister.State(this.getContext().getSelf()));
+        // load balancer asks cash register if the customer has enough money for a coffee
+        cashRegister.tell(new CashRegister.State(this.getContext().getSelf(), request.sender));
         return this;
     }
 
     // load balancer returns the coffee machine with the most coffee to the customer
     private Behavior<Mixed> onGetSupply(GetSupply response) {
         getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
-        this.getContext().getSelf().tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.coffeeMachineMax));
+        response.ofWhom.tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.coffeeMachineMax));
         return this;
     }
 }

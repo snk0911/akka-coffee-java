@@ -2,16 +2,21 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.*;
+import akka.actor.typed.javadsl.AbstractBehavior;
+import akka.actor.typed.javadsl.ActorContext;
+import akka.actor.typed.javadsl.Behaviors;
+import akka.actor.typed.javadsl.Receive;
 
 public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
-    public static class StartMessage {}
+    public static class StartMessage {
+    }
 
     ActorRef<CashRegister.Request> cashRegister;
 
     ActorRef<CoffeeMachine.Request> machine1;
     ActorRef<CoffeeMachine.Request> machine2;
     ActorRef<CoffeeMachine.Request> machine3;
+
     ActorRef<LoadBalancer.Mixed> loadBalancer;
 
     ActorRef<Customer.Response> customer1;
@@ -42,7 +47,7 @@ public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
         machine3 = getContext().spawn(CoffeeMachine.create(10), "Coffee Machine 3");
 
         // load balancer for coffee machines
-        loadBalancer = getContext().spawn(LoadBalancer.create(new ActorRef[]{machine1, machine2, machine3}), "Load Balancer");
+        loadBalancer = getContext().spawn(LoadBalancer.create(cashRegister, new ActorRef[]{machine1, machine2, machine3}), "Load Balancer");
 
         // 4 customers to get money from
         customer1 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Customer Anna");
