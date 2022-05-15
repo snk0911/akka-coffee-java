@@ -2,10 +2,7 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.*;
 
 public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
     private int remainingCoffee;
@@ -56,8 +53,7 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
 
     // this coffee machine tells load balancer the remaining supply
     private Behavior<Request> onGiveSupply(GiveSupply response) {
-        getContext().getLog().info("{} got a supply request from {} (remaining coffee: {})",
-                this.getContext().getSelf().path(), response.sender.path(), remainingCoffee);
+        getContext().getLog().info("Got a supply request from {} (remaining coffee of {}: {})!", response.sender.path(), this.getContext().getSelf().path(), remainingCoffee);
         response.sender.tell(new LoadBalancer.GetSupply(this.getContext().getSelf(), response.ofWhom, this.remainingCoffee));
         return this;
     }
@@ -65,13 +61,13 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
     // this coffee machine reacts to the customer,
     // who asks it directly for coffee
     private Behavior<Request> onGetCoffee(GetCoffee request) {
-        getContext().getLog().info("{} got a get request from {} (remaining coffee: {})", this.getContext().getSelf(), request.sender.path(), remainingCoffee);
+        getContext().getLog().info("Got a get request from {} (remaining coffee of {}: {})!", request.sender.path(), this.getContext().getSelf(), remainingCoffee);
         if (this.remainingCoffee > 0) {
             this.remainingCoffee -= 1;
-            request.sender.tell(new Customer.GetSuccess(request.sender));
+            request.sender.tell(new Customer.GetSuccess());
         } else {
             // the machine runs out of coffee
-            request.sender.tell(new Customer.GetFail(request.sender));
+            request.sender.tell(new Customer.GetFail());
         }
         return this;
     }

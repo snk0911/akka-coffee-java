@@ -2,27 +2,21 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.AbstractBehavior;
-import akka.actor.typed.javadsl.ActorContext;
-import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.*;
 
 public class Customer extends AbstractBehavior<Customer.Response> {
 
     private final ActorRef<LoadBalancer.Mixed> loadBalancer;
     private final ActorRef<CashRegister.Request> cashRegister;
-    private final String name = "";
 
     public interface Response {
     }
 
     // is triggered after balance is successfully recharged
     public static final class RechargeSuccess implements Response {
-        private final ActorRef<Customer.Response> ofWhom;
         private final int balance;
 
-        public RechargeSuccess(ActorRef<Customer.Response> ofWhom, int balance) {
-            this.ofWhom = ofWhom;
+        public RechargeSuccess(int balance) {
             this.balance = balance;
         }
     }
@@ -30,11 +24,6 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     // is triggered when load balancer sends a message
     // that the current balance is not enough for a coffee
     public static final class BalanceFail implements Response {
-        private final ActorRef<Customer.Response> ofWhom;
-
-        public BalanceFail(ActorRef<Customer.Response> ofWhom) {
-            this.ofWhom = ofWhom;
-        }
     }
 
     // is triggered after load balancer returns the machine with the most remaining coffee
@@ -42,7 +31,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         public ActorRef<LoadBalancer.Mixed> sender;
         public ActorRef<CoffeeMachine.Request> coffeeMachine;
 
-        public GetCoffeeMachine(ActorRef<LoadBalancer.Mixed> sender, ActorRef<Customer.Response> customer, ActorRef<CoffeeMachine.Request> coffeeMachine) {
+        public GetCoffeeMachine(ActorRef<LoadBalancer.Mixed> sender, ActorRef<CoffeeMachine.Request> coffeeMachine) {
             this.sender = sender;
             this.coffeeMachine = coffeeMachine;
         }
@@ -50,20 +39,10 @@ public class Customer extends AbstractBehavior<Customer.Response> {
 
     // is triggered after the customer has received a coffee from the machine
     public static final class GetSuccess implements Response {
-        private final ActorRef<Customer.Response> ofWhom;
-
-        public GetSuccess(ActorRef<Customer.Response> ofWhom) {
-            this.ofWhom = ofWhom;
-        }
     }
 
     // is triggered when the chosen coffee machine is empty
     public static final class GetFail implements Response {
-        private final ActorRef<Customer.Response> ofWhom;
-
-        public GetFail(ActorRef<Customer.Response> ofWhom) {
-            this.ofWhom = ofWhom;
-        }
     }
 
 
@@ -75,11 +54,6 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         super(context);
         this.loadBalancer = loadBalancer;
         this.cashRegister = cashRegister;
-        if (Math.random() < 0.5) {
-            cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
-        } else {
-            loadBalancer.tell(new LoadBalancer.GetCoffee(this.getContext().getSelf()));
-        }
     }
 
     @Override
@@ -88,14 +62,15 @@ public class Customer extends AbstractBehavior<Customer.Response> {
                 .onMessage(RechargeSuccess.class, this::onRechargeSuccess)
                 .onMessage(BalanceFail.class, this::onBalanceFail)
                 .onMessage(GetCoffeeMachine.class, this::onGetCoffeeMachine)
-                .onMessage(GetSuccess.class, this::onGetSuccess)
-                .onMessage(GetFail.class, this::onGetFail)
+                //TODO: fix GetSuccess, GetFail und on-Aktionen.
+                //.onMessage(GetSuccess.class, this::onGetSuccess)
+                //.onMessage(GetFail.class, this::onGetFail)
                 .build();
     }
 
     // the cash register confirms that the recharge was successful and shows the new balance
-    private Behavior<Response> onRechargeSuccess(RechargeSuccess response) {
-        getContext().getLog().info("{} have successfully recharged your balance. Current balance: {}", response.ofWhom, response.balance);
+    private Behavior<Response> onRechargeSuccess(RechargeSuccess command) {
+        getContext().getLog().info("You have successfully recharged your balance. Current balance: {}", command.balance);
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -106,7 +81,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
 
     // the customer doesn't have enough money for a coffee
     private Behavior<Response> onBalanceFail(BalanceFail command) {
-        getContext().getLog().info("{}, your current balance is insufficient for a coffee. Please try again.", this.getContext().getSelf().path());
+        getContext().getLog().info("Your current balance is insufficient for a coffee. Please try again.");
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -116,15 +91,15 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     }
 
     // customer receives the coffee machine with the most remaining supply
-    private Behavior<Response> onGetCoffeeMachine(GetCoffeeMachine response) {
-        getContext().getLog().info("You can now take coffee from {}", response.coffeeMachine.path());
-        response.coffeeMachine.tell(new CoffeeMachine.GetCoffee(this.getContext().getSelf()));
+    private Behavior<Response> onGetCoffeeMachine(GetCoffeeMachine command) {
+        getContext().getLog().info("You can now take coffee from {}", command.coffeeMachine.path());
+        command.coffeeMachine.tell(new CoffeeMachine.GetCoffee(this.getContext().getSelf()));
         return this;
     }
 
     // customer successfully received a coffee from the coffee machine
-    private Behavior<Response> onGetSuccess(GetSuccess response) {
-        getContext().getLog().info("Here is your coffee {}!", response.ofWhom);
+    private Behavior<Response> onGetSuccess() {
+        getContext().getLog().info("Here is your coffee!");
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -134,8 +109,8 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     }
 
     // all the coffee machines have run out of coffee
-    private Behavior<Response> onGetFail(GetFail response) {
-        getContext().getLog().info("Sorry {}, we have run out of coffee. Please try again later.", response.ofWhom);
+    private Behavior<Response> onGetFail() {
+        getContext().getLog().info("Sorry, we have run out of coffee. Please try again later.");
         return Behaviors.stopped();
     }
 }
