@@ -38,22 +38,24 @@ public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
     }
 
     private Behavior<StartMessage> onStartMessage(StartMessage command) {
+
         // cash register which determines if enough balance is given
-        cashRegister = getContext().spawn(CashRegister.create(0), "Cash Register");
+        cashRegister = getContext().spawn(CashRegister.create(), "CashRegister");
 
         // 3 coffee machines with 10 units of coffee
-        machine1 = getContext().spawn(CoffeeMachine.create(10), "Coffee Machine 1");
-        machine2 = getContext().spawn(CoffeeMachine.create(10), "Coffee Machine 2");
-        machine3 = getContext().spawn(CoffeeMachine.create(10), "Coffee Machine 3");
+        machine1 = getContext().spawn(CoffeeMachine.create(10), "CoffeeMachine1");
+        machine2 = getContext().spawn(CoffeeMachine.create(10), "CoffeeMachine2");
+        machine3 = getContext().spawn(CoffeeMachine.create(10), "CoffeeMachine3");
 
         // load balancer for coffee machines
-        loadBalancer = getContext().spawn(LoadBalancer.create(cashRegister, new ActorRef[]{machine1, machine2, machine3}), "Load Balancer");
+        loadBalancer = getContext().spawn(LoadBalancer.create(cashRegister, new ActorRef[]{machine1, machine2, machine3}), "LoadBalancer");
 
         // 4 customers to get money from
-        customer1 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Customer Anna");
-        customer2 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Customer Homer Simpson");
-        customer3 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Customer Walter White");
-        customer4 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Customer Harry");
+        customer1 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Anna");
+        customer2 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "HomerSimpson");
+        customer3 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "WalterWhite");
+        customer4 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Harry");
+
         return this;
     }
 }

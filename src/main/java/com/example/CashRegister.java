@@ -2,12 +2,19 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
-import akka.actor.typed.javadsl.*;
+import akka.actor.typed.javadsl.AbstractBehavior;
+import akka.actor.typed.javadsl.ActorContext;
+import akka.actor.typed.javadsl.Behaviors;
+import akka.actor.typed.javadsl.Receive;
+import akka.japi.Pair;
+
+import java.util.Arrays;
 
 public class CashRegister extends AbstractBehavior<CashRegister.Request> {
 
-    //balance of the current customer
-    private int balance;
+    //balance database
+    private final Pair<ActorRef<Customer.Response>, Integer>[] database = new Pair[4];
+    private int newSlot = 0;
 
     public interface Request {
     }
@@ -32,13 +39,13 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         }
     }
 
-    public static Behavior<Request> create(int balance) {
-        return Behaviors.setup(context -> new CashRegister(context, balance));
+    public static Behavior<Request> create() {
+        return Behaviors.setup(CashRegister::new);
     }
 
-    private CashRegister(ActorContext<Request> context, int balance) {
+    private CashRegister(ActorContext<Request> context) {
         super(context);
-        this.balance = balance;
+
     }
 
     @Override
@@ -51,19 +58,41 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
 
     // cash register recharges the balance of the customer
     private Behavior<Request> onRecharge(Recharge request) {
-        getContext().getLog().info("Got a deposit request from {}", request.sender.path());
-        this.balance += 1;
-        // cash register sends a message with the new balance
-        request.sender.tell(new Customer.RechargeSuccess(balance));
+        getContext().getLog().info("Cash register got a deposit request from {}", request.sender.path());
+        // if the customer is new to the system, we have to add him/her in the database
+        if (Arrays.stream(database).noneMatch(x -> ((x != null) && (x.first() == request.sender)))) {
+            database[newSlot] = new Pair<>(request.sender, 1);
+            request.sender.tell(new Customer.RechargeSuccess(request.sender, database[newSlot].second()));
+            newSlot++;
+        } else {
+            // else find the information of the customer in database
+            for (Pair<ActorRef<Customer.Response>, Integer> info :
+                    this.database) {
+                if ((info != null) && (info.first().equals(request.sender))) {
+                    info = new Pair<>(info.first(), info.second() + 1);
+                    // cash register sends a message with the new balance
+                    request.sender.tell(new Customer.RechargeSuccess(info.first(), info.second()));
+                }
+            }
+        }
         return this;
     }
 
     // cash register gives the balance status of the customer to load balancer
     private Behavior<Request> onState(State request) {
-        getContext().getLog().info("Got a status request from {} (Current balance: {})!", request.sender.path(), balance);
-        if (this.balance > 0) {
-            this.balance -= 1;
-            request.sender.tell(new LoadBalancer.CreditSuccess(this.getContext().getSelf(), request.ofWhom));
+        if (Arrays.stream(database).anyMatch((x -> (x != null) && (x.first() == request.ofWhom)))) {
+            for (Pair<ActorRef<Customer.Response>, Integer> info :
+                    this.database) {
+                if ((info != null) && (info.first() == request.ofWhom)) {
+                    getContext().getLog().info("Cash register got a status request of customer {} (Current balance: {})", request.ofWhom.path(), info.second());
+                    if (info.second() > 0) {
+                        info = new Pair<>(request.ofWhom, info.second() - 1);
+                        request.sender.tell(new LoadBalancer.CreditSuccess(this.getContext().getSelf(), request.ofWhom));
+                    } else {
+                        request.sender.tell(new LoadBalancer.CreditFail(this.getContext().getSelf(), request.ofWhom));
+                    }
+                }
+            }
         } else {
             request.sender.tell(new LoadBalancer.CreditFail(this.getContext().getSelf(), request.ofWhom));
         }
