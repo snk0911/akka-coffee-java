@@ -95,13 +95,13 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     // the customer doesn't have enough money for a coffee
     private Behavior<Mixed> onCreditFail(CreditFail response) {
         // load balancer forwards the error message to the customer
-        response.ofWhom.tell(new Customer.BalanceFail());
+        response.ofWhom.tell(new Customer.BalanceFail(response.ofWhom));
         return this;
     }
 
     // customer asks load balancer for a coffee
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
-        getContext().getLog().info("Got a get request from {}!", request.sender.path());
+        getContext().getLog().info("Load balancer got a get request from {}", request.sender.path());
         // load balancer asks cash register if the customer has enough money for a coffee
         cashRegister.tell(new CashRegister.State(this.getContext().getSelf(), request.sender));
         return this;
@@ -109,8 +109,12 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
 
     // load balancer returns the coffee machine with the most coffee to the customer
     private Behavior<Mixed> onGetSupply(GetSupply response) {
-        getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
-        response.ofWhom.tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.coffeeMachineMax));
+        if (response.max == 0) {
+            response.ofWhom.tell(new Customer.GetFail(response.ofWhom));
+        } else {
+            getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
+            response.ofWhom.tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.ofWhom, response.coffeeMachineMax));
+        }
         return this;
     }
 }
