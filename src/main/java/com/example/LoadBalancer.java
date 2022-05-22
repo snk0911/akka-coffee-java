@@ -1,3 +1,7 @@
+// Sewerin Kuss 201346
+// Duc Anh Le 230662
+// Janis Melon 209928
+
 package com.example;
 
 import akka.actor.typed.ActorRef;
@@ -18,7 +22,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     public interface Mixed {
     }
 
-    // is triggered after cash register confirmed that the customer has enough money
+    /**
+     * Is triggered after cash register confirmed that the customer has enough money
+     */
     public static class CreditSuccess implements Mixed {
         public ActorRef<CashRegister.Request> sender;
         public ActorRef<Customer.Response> ofWhom;
@@ -29,7 +35,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // is triggered after cash register confirmed that the customer doesn't have enough money
+    /**
+     * Is triggered after cash register confirmed that the customer doesn't have enough money
+     */
     public static final class CreditFail implements Mixed {
         public ActorRef<CashRegister.Request> sender;
         public ActorRef<Customer.Response> ofWhom;
@@ -40,7 +48,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // is triggered after receiving the supply report from a coffee machine
+    /**
+     * Is triggered after receiving the supply report from a coffee machine
+     */
     public static final class GetSupply implements Mixed {
         public ActorRef<CoffeeMachine.Request> sender;
         public ActorRef<Customer.Response> ofWhom;
@@ -54,7 +64,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // is triggered after receiving all the supply reports from 3 coffee machines
+    /**
+     * Is triggered after receiving all the supply reports from 3 coffee machines
+     */
     public static final class GotAllSupply implements Mixed {
         public ActorRef<LoadBalancer.Mixed> sender;
         public ActorRef<Customer.Response> ofWhom;
@@ -65,7 +77,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         }
     }
 
-    // is triggered after customer asks load balancer for a coffee
+    /**
+     * Is triggered after customer asks load balancer for a coffee
+     */
     public static final class GetCoffee implements Mixed {
         public ActorRef<Customer.Response> sender;
 
@@ -95,7 +109,12 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
                 .build();
     }
 
-    // the customer has enough money for a coffee
+    /**
+     * Needs to be triggered when the customer has enough money for a coffee.
+     *
+     * @param respond Contains the success when enough credit is available
+     * @return this
+     */
     private Behavior<Mixed> onCreditSuccess(CreditSuccess respond) {
         getContext().getLog().info("{} has enough money for coffee", respond.ofWhom);
         //then the load balancer asks all the coffee machines for their supplies
@@ -105,14 +124,24 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // the customer doesn't have enough money for a coffee
+    /**
+     * Triggers when the customer doesn't have enough money for a coffee.
+     *
+     * @param response Contains response on confirmed not available credit
+     * @return this
+     */
     private Behavior<Mixed> onCreditFail(CreditFail response) {
         // load balancer forwards the error message to the customer
         response.ofWhom.tell(new Customer.BalanceFail(response.ofWhom));
         return this;
     }
 
-    // customer asks load balancer for a coffee
+    /**
+     * Customer asks load balancer for a coffee.
+     *
+     * @param request request
+     * @return this
+     */
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
         getContext().getLog().info("Load balancer got a get coffee request from {}", request.sender.path());
         // load balancer asks cash register if the customer has enough money for a coffee
@@ -120,8 +149,16 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // if the load balancer receives all reports from 3 coffee machines,
-    // finds the coffee machine with the most coffee
+    //
+    //
+
+    /**
+     * If the load balancer receives all reports from 3 coffee machines,
+     * this will find the coffee machine with the most coffee.
+     *
+     * @param response Contains response to check for available supply from machines
+     * @return this
+     */
     private Behavior<Mixed> onGetSupply(GetSupply response) {
         count++;
         if (response.remainingCoffee >= max) {
@@ -135,7 +172,12 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
         return this;
     }
 
-    // load balancer returns the coffee machine with the most coffee to the customer
+    /**
+     * Load balancer returns the coffee machine with the most coffee to the customer.
+     *
+     * @param response Contains response on all 3 machines for supply info
+     * @return this
+     */
     private Behavior<Mixed> onGotAllSupply(GotAllSupply response) {
         if (max == 0) {
             response.ofWhom.tell(new Customer.GetFail(response.ofWhom));

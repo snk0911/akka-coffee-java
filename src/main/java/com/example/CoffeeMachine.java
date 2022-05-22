@@ -1,3 +1,7 @@
+// Sewerin Kuss 201346
+// Duc Anh Le 230662
+// Janis Melon 209928
+
 package com.example;
 
 import akka.actor.typed.ActorRef;
@@ -13,8 +17,9 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
     public interface Request {
     }
 
-    // is triggered when the load balancer asks for
-    // the amount of remaining coffee at this coffee machine
+    /**
+     * Is triggered when the load balancer asks for the amount of remaining coffee in the machines.
+     */
     public static final class GiveSupply implements Request {
         public ActorRef<LoadBalancer.Mixed> sender;
         public ActorRef<Customer.Response> ofWhom;
@@ -27,8 +32,9 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
         }
     }
 
-    // is triggered when the customer asks this coffee machine
-    // directly for a coffee (after being checked)
+    /**
+     * Is triggered when the customer asks the coffee machine directly for a coffee (after being checked).
+     */
     public static final class GetCoffee implements Request {
         public final ActorRef<Customer.Response> sender;
 
@@ -54,7 +60,12 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
                 .build();
     }
 
-    // this coffee machine tells load balancer the remaining supply
+    /**
+     * This coffee machine tells load balancer the remaining supply.
+     *
+     * @param response Contains supply request from load balancer
+     * @return this
+     */
     private Behavior<Request> onGiveSupply(GiveSupply response) {
         getContext().getLog().info("{} got a supply request from load balancer (remaining coffee: {})",
                 this.getContext().getSelf().path(), remainingCoffee);
@@ -62,8 +73,11 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
         return this;
     }
 
-    // this coffee machine reacts to the customer,
-    // who asks it directly for coffee
+    /**
+     * This coffee machine reacts to the customer who asks the machine directly for coffee.
+     * @param request Contains a "Get-Coffee"-Request for the amount coffee
+     * @return this
+     */
     private Behavior<Request> onGetCoffee(GetCoffee request) {
         getContext().getLog().info("{} got a get request from {} (remaining coffee: {})", this.getContext().getSelf(), request.sender.path(), remainingCoffee);
         if (this.remainingCoffee > 0) {
