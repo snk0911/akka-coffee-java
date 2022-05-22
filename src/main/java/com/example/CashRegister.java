@@ -1,4 +1,7 @@
 package com.example;
+// Sewerin Kuss 201346
+// Duc Anh Le 230662
+// Janis Melon 209928
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
