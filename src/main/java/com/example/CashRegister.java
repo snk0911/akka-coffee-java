@@ -14,12 +14,15 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
 
     //balance database
     private final Pair<ActorRef<Customer.Response>, Integer>[] database = new Pair[4];
+    // private final Pair<ActorRef<Customer.Response>, Integer>[] database = new Pair[4];
     private int newSlot = 0;
 
     public interface Request {
     }
 
-    // is triggered when the customer wants to recharge the balance
+    /**
+     * Is triggered when the customer wants to recharge the balance.
+     */
     public static final class Recharge implements Request {
         public ActorRef<Customer.Response> sender;
 
@@ -28,7 +31,9 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         }
     }
 
-    // is triggered when load balancer asks for the current balance of the customer
+    /**
+     * Is triggered when load balancer asks for the current balance of the customer.
+     */
     public static final class State implements Request {
         public final ActorRef<LoadBalancer.Mixed> sender;
         public final ActorRef<Customer.Response> ofWhom;
@@ -56,7 +61,12 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
                 .build();
     }
 
-    // cash register recharges the balance of the customer
+    /**
+     * The cash register recharges the balance of the customer.
+     *
+     * @param request Contains the request for a recharge.
+     * @return this
+     */
     private Behavior<Request> onRecharge(Recharge request) {
         getContext().getLog().info("Cash register got recharge request from {}", request.sender.path());
         // if the customer is new to the system, we have to add him/her in the database
@@ -80,7 +90,12 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
         return this;
     }
 
-    // cash register gives the balance status of the customer to load balancer
+    /**
+     * The cash register gives the balance status of the customer to load balancer
+     *
+     * @param request Request for money state from customer
+     * @return this
+     */
     private Behavior<Request> onState(State request) {
         if (Arrays.stream(database).anyMatch((x -> (x != null) && (x.first() == request.ofWhom)))) {
             for (int i = 0; i < database.length; i++) {

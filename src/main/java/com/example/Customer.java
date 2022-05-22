@@ -15,7 +15,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     public interface Response {
     }
 
-    // is triggered after balance is successfully recharged
+    /**
+     * Is triggered after balance is successfully recharged.
+     */
     public static final class RechargeSuccess implements Response {
         private final ActorRef<Customer.Response> ofWhom;
         private final int balance;
@@ -26,8 +28,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         }
     }
 
-    // is triggered when load balancer sends a message
-    // that the current balance is not enough for a coffee
+    /**
+     * Is triggered when load balancer sends a message that balance is not enough for a coffee.
+     */
     public static final class BalanceFail implements Response {
         private final ActorRef<Customer.Response> ofWhom;
 
@@ -36,7 +39,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         }
     }
 
-    // is triggered after load balancer returns the machine with the most remaining coffee
+    /**
+     * Is triggered after load balancer returns the machine with the most remaining coffee.
+     */
     public static final class GetCoffeeMachine implements Response {
         public ActorRef<LoadBalancer.Mixed> sender;
         public ActorRef<CoffeeMachine.Request> coffeeMachine;
@@ -47,7 +52,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         }
     }
 
-    // is triggered after the customer has received a coffee from the machine
+    /**
+     * Is triggered after the customer has received a coffee from the machine.
+     */
     public static final class GetSuccess implements Response {
         private final ActorRef<Customer.Response> ofWhom;
 
@@ -56,7 +63,9 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         }
     }
 
-    // is triggered when the chosen coffee machine is empty
+    /**
+     * Is triggered when the chosen coffee machine is empty.
+     */
     public static final class GetFail implements Response {
         private final ActorRef<Customer.Response> ofWhom;
 
@@ -92,7 +101,14 @@ public class Customer extends AbstractBehavior<Customer.Response> {
                 .build();
     }
 
-    // the cash register confirms that the recharge was successful and shows the new balance
+    /**
+     * The cash register confirms that the recharge was successful and shows the new balance.
+     *
+     * @param response Contains a success/no success response for the tried recharge
+     * @return this
+     * @throws InterruptedException If sync fails...
+     */
+    //
     private Behavior<Response> onRechargeSuccess(RechargeSuccess response) throws InterruptedException {
         getContext().getLog().info("{}, you have successfully recharged your balance. Current balance: {}",
                 response.ofWhom, response.balance);
@@ -105,7 +121,12 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         return this;
     }
 
-    // the customer doesn't have enough money for a coffee
+    /**
+     * The customer doesn't have enough money for a coffee.
+     *
+     * @param command Used to track from whom the message is
+     * @throws InterruptedException If sync fails...
+     */
     private Behavior<Response> onBalanceFail(BalanceFail command) throws InterruptedException {
         getContext().getLog().info("{}, your current balance is insufficient for a coffee. Please try again.",
                 command.ofWhom);
@@ -118,7 +139,12 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         return this;
     }
 
-    // customer receives the coffee machine with the most remaining supply
+    /**
+     * Customer receives the coffee machine with the most remaining supply
+     *
+     * @param response Contains response from the machine with the most coffee
+     * @return this
+     */
     private Behavior<Response> onGetCoffeeMachine(GetCoffeeMachine response) {
         getContext().getLog().info("{}, you can now take coffee from {}",
                 this.getContext().getSelf(), response.coffeeMachine.path());
@@ -126,7 +152,14 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         return this;
     }
 
-    // customer successfully received a coffee from the coffee machine
+    /**
+     * Customer successfully received a coffee from the coffee machine.
+     *
+     * @param response Contains a success response
+     * @return this
+     * @throws InterruptedException If sync fails...
+     */
+    //
     private Behavior<Response> onGetSuccess(GetSuccess response) throws InterruptedException {
         getContext().getLog().info("Here is your coffee {}!", response.ofWhom);
         Thread.sleep(2000);
@@ -138,7 +171,12 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         return this;
     }
 
-    // all the coffee machines have run out of coffee
+    /**
+     * If the coffee machines ran out of coffee. This service makes everything stop.
+     *
+     * @param response Contains the fail status
+     * @return this
+     */
     private Behavior<Response> onGetFail(GetFail response) {
         getContext().getLog().info("Sorry {}, we have run out of coffee. Please try again later.", response.ofWhom);
         return Behaviors.stopped();
