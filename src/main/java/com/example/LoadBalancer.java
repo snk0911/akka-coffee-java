@@ -11,6 +11,9 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
 
     private final ActorRef<CoffeeMachine.Request>[] coffeeMachinesList;
     private final ActorRef<CashRegister.Request> cashRegister;
+    private ActorRef<CoffeeMachine.Request> coffeeMachineMax;
+    private int max = 10;
+    private int count = 0;
 
     public interface Mixed {
     }
@@ -41,16 +44,24 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
     public static final class GetSupply implements Mixed {
         public ActorRef<CoffeeMachine.Request> sender;
         public ActorRef<Customer.Response> ofWhom;
-        public ActorRef<CoffeeMachine.Request> coffeeMachineMax;
-        public int max;
+        public int remainingCoffee;
 
-        public GetSupply(ActorRef<CoffeeMachine.Request> sender, ActorRef<Customer.Response> ofWhom, int remainingCoffee) {
+        public GetSupply(ActorRef<CoffeeMachine.Request> sender,
+                         ActorRef<Customer.Response> ofWhom, int remainingCoffee) {
             this.sender = sender;
             this.ofWhom = ofWhom;
-            if (remainingCoffee > max) {
-                max = remainingCoffee;
-                coffeeMachineMax = sender;
-            }
+            this.remainingCoffee = remainingCoffee;
+        }
+    }
+
+    // is triggered after receiving all the supply reports from 3 coffee machines
+    public static final class GotAllSupply implements Mixed {
+        public ActorRef<LoadBalancer.Mixed> sender;
+        public ActorRef<Customer.Response> ofWhom;
+
+        public GotAllSupply(ActorRef<LoadBalancer.Mixed> sender, ActorRef<Customer.Response> ofWhom) {
+            this.sender = sender;
+            this.ofWhom = ofWhom;
         }
     }
 
@@ -80,11 +91,13 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
                 .onMessage(CreditFail.class, this::onCreditFail)
                 .onMessage(GetCoffee.class, this::onGetCoffee)
                 .onMessage(GetSupply.class, this::onGetSupply)
+                .onMessage(GotAllSupply.class, this::onGotAllSupply)
                 .build();
     }
 
     // the customer has enough money for a coffee
     private Behavior<Mixed> onCreditSuccess(CreditSuccess respond) {
+        getContext().getLog().info("{} has enough money for coffee", respond.ofWhom);
         //then the load balancer asks all the coffee machines for their supplies
         for (ActorRef<CoffeeMachine.Request> coffeeMachine : coffeeMachinesList) {
             coffeeMachine.tell(new CoffeeMachine.GiveSupply(this.getContext().getSelf(), respond.ofWhom, coffeeMachine));
@@ -101,19 +114,34 @@ public class LoadBalancer extends AbstractBehavior<LoadBalancer.Mixed> {
 
     // customer asks load balancer for a coffee
     private Behavior<Mixed> onGetCoffee(GetCoffee request) {
-        getContext().getLog().info("Load balancer got a get request from {}", request.sender.path());
+        getContext().getLog().info("Load balancer got a get coffee request from {}", request.sender.path());
         // load balancer asks cash register if the customer has enough money for a coffee
         cashRegister.tell(new CashRegister.State(this.getContext().getSelf(), request.sender));
         return this;
     }
 
-    // load balancer returns the coffee machine with the most coffee to the customer
+    // if the load balancer receives all reports from 3 coffee machines,
+    // finds the coffee machine with the most coffee
     private Behavior<Mixed> onGetSupply(GetSupply response) {
-        if (response.max == 0) {
+        count++;
+        if (response.remainingCoffee >= max) {
+            max = response.remainingCoffee;
+            coffeeMachineMax = response.sender;
+        }
+        if (count == 3) {
+            this.getContext().getSelf().tell(new GotAllSupply(this.getContext().getSelf(), response.ofWhom));
+            count = 0;
+        }
+        return this;
+    }
+
+    // load balancer returns the coffee machine with the most coffee to the customer
+    private Behavior<Mixed> onGotAllSupply(GotAllSupply response) {
+        if (max == 0) {
             response.ofWhom.tell(new Customer.GetFail(response.ofWhom));
         } else {
-            getContext().getLog().info("You can get a coffee from {}", response.coffeeMachineMax.path());
-            response.ofWhom.tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), response.ofWhom, response.coffeeMachineMax));
+            response.ofWhom.tell(new Customer.GetCoffeeMachine(this.getContext().getSelf(), coffeeMachineMax));
+            max--;
         }
         return this;
     }

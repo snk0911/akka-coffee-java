@@ -11,7 +11,6 @@ public class Customer extends AbstractBehavior<Customer.Response> {
 
     private final ActorRef<LoadBalancer.Mixed> loadBalancer;
     private final ActorRef<CashRegister.Request> cashRegister;
-    private final String name = "";
 
     public interface Response {
     }
@@ -42,7 +41,7 @@ public class Customer extends AbstractBehavior<Customer.Response> {
         public ActorRef<LoadBalancer.Mixed> sender;
         public ActorRef<CoffeeMachine.Request> coffeeMachine;
 
-        public GetCoffeeMachine(ActorRef<LoadBalancer.Mixed> sender, ActorRef<Customer.Response> customer, ActorRef<CoffeeMachine.Request> coffeeMachine) {
+        public GetCoffeeMachine(ActorRef<LoadBalancer.Mixed> sender, ActorRef<CoffeeMachine.Request> coffeeMachine) {
             this.sender = sender;
             this.coffeeMachine = coffeeMachine;
         }
@@ -94,8 +93,10 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     }
 
     // the cash register confirms that the recharge was successful and shows the new balance
-    private Behavior<Response> onRechargeSuccess(RechargeSuccess response) {
-        getContext().getLog().info("{} have successfully recharged your balance. Current balance: {}", response.ofWhom, response.balance);
+    private Behavior<Response> onRechargeSuccess(RechargeSuccess response) throws InterruptedException {
+        getContext().getLog().info("{}, you have successfully recharged your balance. Current balance: {}",
+                response.ofWhom, response.balance);
+        Thread.sleep(2000);
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -105,8 +106,10 @@ public class Customer extends AbstractBehavior<Customer.Response> {
     }
 
     // the customer doesn't have enough money for a coffee
-    private Behavior<Response> onBalanceFail(BalanceFail command) {
-        getContext().getLog().info("{}, your current balance is insufficient for a coffee. Please try again.", this.getContext().getSelf().path());
+    private Behavior<Response> onBalanceFail(BalanceFail command) throws InterruptedException {
+        getContext().getLog().info("{}, your current balance is insufficient for a coffee. Please try again.",
+                command.ofWhom);
+        Thread.sleep(2000);
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {
@@ -117,14 +120,16 @@ public class Customer extends AbstractBehavior<Customer.Response> {
 
     // customer receives the coffee machine with the most remaining supply
     private Behavior<Response> onGetCoffeeMachine(GetCoffeeMachine response) {
-        getContext().getLog().info("You can now take coffee from {}", response.coffeeMachine.path());
+        getContext().getLog().info("{}, you can now take coffee from {}",
+                this.getContext().getSelf(), response.coffeeMachine.path());
         response.coffeeMachine.tell(new CoffeeMachine.GetCoffee(this.getContext().getSelf()));
         return this;
     }
 
     // customer successfully received a coffee from the coffee machine
-    private Behavior<Response> onGetSuccess(GetSuccess response) {
+    private Behavior<Response> onGetSuccess(GetSuccess response) throws InterruptedException {
         getContext().getLog().info("Here is your coffee {}!", response.ofWhom);
+        Thread.sleep(2000);
         if (Math.random() < 0.5) {
             cashRegister.tell(new CashRegister.Recharge(this.getContext().getSelf()));
         } else {

@@ -58,7 +58,7 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
 
     // cash register recharges the balance of the customer
     private Behavior<Request> onRecharge(Recharge request) {
-        getContext().getLog().info("Cash register got a deposit request from {}", request.sender.path());
+        getContext().getLog().info("Cash register got recharge request from {}", request.sender.path());
         // if the customer is new to the system, we have to add him/her in the database
         if (Arrays.stream(database).noneMatch(x -> ((x != null) && (x.first() == request.sender)))) {
             database[newSlot] = new Pair<>(request.sender, 1);
@@ -66,12 +66,14 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
             newSlot++;
         } else {
             // else find the information of the customer in database
-            for (Pair<ActorRef<Customer.Response>, Integer> info :
-                    this.database) {
+            for (int i = 0; i < database.length; i++) {
+                Pair<ActorRef<Customer.Response>, Integer> info = database[i];
                 if ((info != null) && (info.first().equals(request.sender))) {
                     info = new Pair<>(info.first(), info.second() + 1);
+                    database[i] = info;
                     // cash register sends a message with the new balance
                     request.sender.tell(new Customer.RechargeSuccess(info.first(), info.second()));
+                    break;
                 }
             }
         }
@@ -81,12 +83,13 @@ public class CashRegister extends AbstractBehavior<CashRegister.Request> {
     // cash register gives the balance status of the customer to load balancer
     private Behavior<Request> onState(State request) {
         if (Arrays.stream(database).anyMatch((x -> (x != null) && (x.first() == request.ofWhom)))) {
-            for (Pair<ActorRef<Customer.Response>, Integer> info :
-                    this.database) {
+            for (int i = 0; i < database.length; i++) {
+                Pair<ActorRef<Customer.Response>, Integer> info = database[i];
                 if ((info != null) && (info.first() == request.ofWhom)) {
-                    getContext().getLog().info("Cash register got a status request of customer {} (Current balance: {})", request.ofWhom.path(), info.second());
                     if (info.second() > 0) {
+                        // after confirming that the customer has enough money, credit is then decremented
                         info = new Pair<>(request.ofWhom, info.second() - 1);
+                        database[i] = info;
                         request.sender.tell(new LoadBalancer.CreditSuccess(this.getContext().getSelf(), request.ofWhom));
                     } else {
                         request.sender.tell(new LoadBalancer.CreditFail(this.getContext().getSelf(), request.ofWhom));

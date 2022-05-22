@@ -37,7 +37,7 @@ public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
         return newReceiveBuilder().onMessage(StartMessage.class, this::onStartMessage).build();
     }
 
-    private Behavior<StartMessage> onStartMessage(StartMessage command) {
+    private Behavior<StartMessage> onStartMessage(StartMessage command) throws InterruptedException {
 
         // cash register which determines if enough balance is given
         cashRegister = getContext().spawn(CashRegister.create(), "CashRegister");
@@ -52,8 +52,11 @@ public class CoffeeMain extends AbstractBehavior<CoffeeMain.StartMessage> {
 
         // 4 customers to get money from
         customer1 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Anna");
+        Thread.sleep(500);
         customer2 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "HomerSimpson");
+        Thread.sleep(500);
         customer3 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "WalterWhite");
+        Thread.sleep(500);
         customer4 = getContext().spawn(Customer.create(cashRegister, loadBalancer), "Harry");
 
         return this;

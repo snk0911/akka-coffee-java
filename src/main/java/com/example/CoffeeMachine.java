@@ -56,8 +56,8 @@ public class CoffeeMachine extends AbstractBehavior<CoffeeMachine.Request> {
 
     // this coffee machine tells load balancer the remaining supply
     private Behavior<Request> onGiveSupply(GiveSupply response) {
-        getContext().getLog().info("{} got a supply request from {} (remaining coffee: {})",
-                this.getContext().getSelf().path(), response.sender.path(), remainingCoffee);
+        getContext().getLog().info("{} got a supply request from load balancer (remaining coffee: {})",
+                this.getContext().getSelf().path(), remainingCoffee);
         response.sender.tell(new LoadBalancer.GetSupply(this.getContext().getSelf(), response.ofWhom, this.remainingCoffee));
         return this;
     }
