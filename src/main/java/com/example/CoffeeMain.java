@@ -1,7 +1,3 @@
-// Sewerin Kuss 201346
-// Duc Anh Le 230662
-// Janis Melon 209928
-
 package com.example;
 
 import akka.actor.typed.ActorRef;
