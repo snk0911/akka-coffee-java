@@ -16,6 +16,30 @@ Four customers continuously and independently do one of two things: top up their
 
 If a customer has insufficient balance, they're told to recharge. If all machines run out, the system reports that it's out of coffee.
 
+## Message flow
+
+The diagram below shows a complete "get a coffee" cycle. Note that no actor ever calls another directly — every arrow is an asynchronous message. The `LoadBalancer` even has to count the replies itself (`count == 3`), because the three machines respond independently and in any order. That coordination is the core of the actor model this project illustrates.
+
+```mermaid
+sequenceDiagram
+    participant C as Customer
+    participant LB as LoadBalancer
+    participant CR as CashRegister
+    participant M as CoffeeMachines (x3)
+
+    C->>LB: 1. GetCoffee
+    LB->>CR: 2. State (enough balance?)
+    CR-->>LB: 3. CreditSuccess (deduct 1 credit)
+    LB->>M: 4. GiveSupply (to all 3)
+    M-->>LB: 5. GetSupply (remaining per machine)
+    Note over LB: 6. GotAllSupply → pick fullest machine
+    LB-->>C: 7. GetCoffeeMachine
+    C->>M: 8. GetCoffee (directly to that machine)
+    M-->>C: 9. GetSuccess — coffee served!
+
+    Note over C,M: Branches: CreditFail at step 3 → BalanceFail (too little credit) · GetFail at step 9 if all machines empty → customer stops
+```
+
 ## Architecture
 
 ```
